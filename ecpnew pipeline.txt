@@ -1,0 +1,45 @@
+pipeline {
+   agent none
+   tools { 
+        jdk 'JDK1.8.0_211' 
+        maven 'Maven' 
+   }
+    stages {
+        stage('SVN Checkout') {
+            agent { label 'Agent-Slave1'}
+            steps {
+               checkout([$class: 'SubversionSCM', additionalCredentials: [], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[cancelProcessOnExternalsFail: true, credentialsId: 'e627e722-373b-4072-86fb-5e2a58ff082f', depthOption: 'infinity', ignoreExternalsOption: true, local: '.', remote: 'https://sesseri01771.ss.sw.ericsson.se:8443/svn/Product/ECP/MavenModulesDevOps/ECPNew_SSO/ECPNew']], quietOperation: true, workspaceUpdater: [$class: 'UpdateUpdater']])
+            }
+        }
+        
+        stage('Maven version') {
+            agent { label 'Agent-Slave1'}
+            steps { 
+                bat 'mvn --version'    
+            }
+        }
+    
+        stage('Build WAR File') {
+            agent { label 'Agent-Slave1'}
+            steps {    
+              bat 'mvn clean install'  
+              
+            }
+        }
+        
+        stage('Deployment to APP Server') {
+           steps{
+             build '03757_Deploy_ECPNEW'
+           }
+        }
+        
+        stage('RUN Jython script') {
+            agent { label 'Slave03757' }
+            steps {
+                bat label: 'Slave03757', script: '''cd E:\\IBM\\WebSphere\\AppServer\\profiles\\AppSrv01\\bin
+                wsadmin -language jython -user wasadmin -password Tcss@2018 -f E:/script/ECPNEW-jython.py'''
+            }
+        }
+        
+    }
+}
